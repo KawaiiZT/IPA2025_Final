@@ -1,18 +1,21 @@
 #######################################################################################
-# Yourname:
-# Your student ID:
-# Your GitHub Repo: 
+# Yourname: Trisit Charoenparipat
+# Your student ID: 66070069
+# Your GitHub Repo: https://github.com/KawaiiZT/IPA2024-Final
 
 #######################################################################################
 # 1. Import libraries for API requests, JSON formatting, time, os, (restconf_final or netconf_final), netmiko_final, and ansible_final.
 
 <!!!REPLACEME with code for libraries>
+import time, os, requests, json
+import resconf_final import create, status, delete, enable, disable
+import netmiko_final import gigabit_status
+import ansible_final import showrun
 
 #######################################################################################
 # 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
 
-ACCESS_TOKEN = os.environ."<!!!REPLACEME with os.environ method and environment variable!!!>"
-
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 #######################################################################################
 # 3. Prepare parameters get the latest message for messages API.
 
