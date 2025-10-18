@@ -5,6 +5,19 @@
 
 #######################################################################################
 # 1. Import libraries for API requests, JSON formatting, time, os, (restconf_final or netconf_final), netmiko_final, and ansible_final.
+<<<<<<< HEAD
+from dotenv import load_dotenv
+import time, os, requests, json
+from restconf_final import create, status, delete, enable, disable
+from netmiko_final import gigabit_status
+from ansible_final import showrun
+
+#######################################################################################
+# 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
+load_dotenv()
+ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+
+=======
 
 <!!!REPLACEME with code for libraries>
 import time, os, requests, json
@@ -16,13 +29,12 @@ import ansible_final import showrun
 # 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
 
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
+>>>>>>> 1fdeee75e8bddf066811a5c07f502c7f99dd85bc
 #######################################################################################
 # 3. Prepare parameters get the latest message for messages API.
 
 # Defines a variable that will hold the roomId
-roomIdToGetMessages = (
-    "<!!!REPLACEME with roomID of the IPA2024 Webex Teams room!!!>"
-)
+roomIdToGetMessages = os.getenv("room_id")
 
 while True:
     # always add 1 second of delay to the loop to not go over a rate limit of API calls
@@ -34,7 +46,7 @@ while True:
     getParameters = {"roomId": roomIdToGetMessages, "max": 1}
 
     # the Webex Teams HTTP header, including the Authoriztion
-    getHTTPHeader = {"Authorization": <!!!REPLACEME!!!>}
+    getHTTPHeader = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
 
 # 4. Provide the URL to the Webex Teams messages API, and extract location from the received message.
     
@@ -42,9 +54,9 @@ while True:
     # - Use the GetParameters to get only the latest message.
     # - Store the message in the "r" variable.
     r = requests.get(
-        "<!!!REPLACEME with URL of Webex Teams Messages API!!!>",
-        params=<!!!REPLACEME with HTTP parameters!!!>,
-        headers=<!!!REPLACEME with HTTP headers!!!>,
+        "https://webexapis.com/v1/messages",
+        params={"roomId": roomIdToGetMessages, "max": 1},
+        headers={"Authorization": f"Bearer {ACCESS_TOKEN}"} 
     )
     # verify if the retuned HTTP status code is 200/OK
     if not r.status_code == 200:
@@ -68,30 +80,31 @@ while True:
 
     # check if the text of the message starts with the magic character "/" followed by your studentID and a space and followed by a command name
     #  e.g.  "/66070123 create"
-    if message.startswith("<!!!REPLACEME!!!>"):
+    if message.startswith("/66070069"):
 
         # extract the command
-        command = <!!!REPLACEME!!!>
+        command = message.split()[1]
         print(command)
 
 # 5. Complete the logic for each command
 
         if command == "create":
-            <!!!REPLACEME with code for create command!!!>     
+            result = create()
         elif command == "delete":
-            <!!!REPLACEME with code for delete command!!!>
+            result = delete()
         elif command == "enable":
-            <!!!REPLACEME with code for enable command!!!>
+            result = enable()
         elif command == "disable":
-            <!!!REPLACEME with code for disable command!!!>
+            result = disable()
         elif command == "status":
-            <!!!REPLACEME with code for status command!!!>
-         elif command == "gigabit_status":
-            <!!!REPLACEME with code for gigabit_status command!!!>
+            result = status()
+        elif command == "gigabit_status":
+            result = gigabit_status()
         elif command == "showrun":
-            <!!!REPLACEME with code for showrun command!!!>
+            result = showrun()
         else:
             responseMessage = "Error: No command or unknown command"
+            continue
         
 # 6. Complete the code to post the message to the Webex Teams room.
 
