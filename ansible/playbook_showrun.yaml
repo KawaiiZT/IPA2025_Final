@@ -1,20 +1,26 @@
 ---
-- name: Collect and save running-config
-  hosts: csr
-  gather_facts: no
+- name: BACKUP RUNNING CONFIG
+  hosts: CSR1kv
+  gather_facts: false
+  connection: network_cli
   collections:
     - cisco.ios
   vars:
-    student_id: "{{ student_id | default('66070069') }}"
-  tasks:
-    - name: Get running-config
-      cisco.ios.ios_command:
-        commands: ["show running-config"]
-      register: run_cfg
+    ansible_command_timeout: 120
+    ansible_connect_timeout: 60
 
-    - name: Save running-config locally as show_run_[studentID]_[router_name].txt
-      copy:
-        content: "{{ run_cfg.stdout[0] }}"
-        dest: "show_run_{{ student_id }}_{{ inventory_hostname }}.txt"
-        mode: "0644"
-      delegate_to: localhost
+  tasks:
+   - name: GATHER HOSTNAME FACTS
+     ios_facts:
+     register: facts
+
+   - name: DISPLAY RUNNING CONFIG
+     ios_command:
+       commands:
+         - show running-config
+     register: config
+
+   - name: SAVE OUTPUT
+     copy:
+       content: "{{ config.stdout[0] }}"
+       dest: "./show_run_66070069_{{ ansible_net_hostname }}.txt"
