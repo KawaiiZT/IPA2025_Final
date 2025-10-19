@@ -1,26 +1,30 @@
 ---
-- name: BACKUP RUNNING CONFIG
-  hosts: CSR1kv
+- name: Collect and save running-config
+  hosts: CSR1000V
   gather_facts: false
-  connection: network_cli
+  connection: ansible.netcommon.network_cli
   collections:
     - cisco.ios
+    - ansible.netcommon
   vars:
-    ansible_command_timeout: 120
-    ansible_connect_timeout: 60
-
+    ansible_network_os: cisco.ios.ios
+    ansible_network_cli_ssh_type: paramiko   # <-- บรรทัดสำคัญ
+    student_id: "{{ student_id | default('66070069') }}"
   tasks:
-   - name: GATHER HOSTNAME FACTS
-     ios_facts:
-     register: facts
-
-   - name: DISPLAY RUNNING CONFIG
-     ios_command:
-       commands:
-         - show running-config
-     register: config
-
-   - name: SAVE OUTPUT
-     copy:
-       content: "{{ config.stdout[0] }}"
-       dest: "./show_run_66070069_{{ ansible_net_hostname }}.txt"
+    - name: Get running-config
+      cisco.ios.ios_command:
+        commands:
+          - show running-config
+      register: run_cfg
+    - name: Ensure local backups folder exists
+      delegate_to: localhost
+      ansible.builtin.file:
+        path: backups
+        state: directory
+        mode: '0755'
+    - name: Save running-config locally
+      delegate_to: localhost
+      ansible.builtin.copy:
+        content: "{{ run_cfg.stdout[0] }}"
+        dest: "backups/show_run_{{ student_id }}_CSR1000V.txt"
+        mode: "0644"
