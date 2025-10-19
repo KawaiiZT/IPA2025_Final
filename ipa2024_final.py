@@ -5,31 +5,17 @@
 
 #######################################################################################
 # 1. Import libraries for API requests, JSON formatting, time, os, (restconf_final or netconf_final), netmiko_final, and ansible_final.
-<<<<<<< HEAD
 from dotenv import load_dotenv
 import time, os, requests, json
 from restconf_final import create, status, delete, enable, disable
 from netmiko_final import gigabit_status
 from ansible_final import showrun
-
+from requests_toolbelt.multipart.encoder import MultipartEncoder 
 #######################################################################################
 # 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
 load_dotenv()
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
 
-=======
-
-<!!!REPLACEME with code for libraries>
-import time, os, requests, json
-import resconf_final import create, status, delete, enable, disable
-import netmiko_final import gigabit_status
-import ansible_final import showrun
-
-#######################################################################################
-# 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
-
-ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
->>>>>>> 1fdeee75e8bddf066811a5c07f502c7f99dd85bc
 #######################################################################################
 # 3. Prepare parameters get the latest message for messages API.
 
@@ -121,32 +107,37 @@ while True:
         # https://developer.webex.com/docs/basics for more detail
 
         if command == "showrun" and responseMessage == 'ok':
-            filename = "<!!!REPLACEME with show run filename and path!!!>"
-            fileobject = <!!!REPLACEME with open file!!!>
-            filetype = "<!!!REPLACEME with Content-type of the file!!!>"
-            postData = {
-                "roomId": <!!!REPLACEME!!!>,
-                "text": "show running config",
-                "files": (<!!!REPLACEME!!!>, <!!!REPLACEME!!!>, <!!!REPLACEME!!!>),
-            }
-            postData = MultipartEncoder(<!!!REPLACEME!!!>)
+            filename = f"show_run_66070069_CSR1000V.txt"
+            fileobject = open(filename, "rb")
+            filetype = "text/plain"
+            postData = MultipartEncoder(
+                fields={
+                    "roomId": roomIdToGetMessages,
+                    "text": "show running config",
+                    "files": (os.path.basename(filename), fileobject, filetype),
+                }
+            )
             HTTPHeaders = {
-            "Authorization": ACCESS_TOKEN,
-            "Content-Type": <!!!REPLACEME with postData Content-Type!!!>,
+                "Authorization": f"Bearer {ACCESS_TOKEN}",
+                "Content-Type": postData.content_type,
             }
         # other commands only send text, or no attached file.
         else:
-            postData = {"roomId": <!!!REPLACEME!!!>, "text": <!!!REPLACEME!!!>}
+            postData = {"roomId": roomIdToGetMessages, "text": responseMessage}
             postData = json.dumps(postData)
 
-            # the Webex Teams HTTP headers, including the Authoriztion and Content-Type
-            HTTPHeaders = {"Authorization": <!!!REPLACEME!!!>, "Content-Type": <!!!REPLACEME!!!>}   
+            # the Webex Teams HTTP headers, including the Authorization and Content-Type
+            HTTPHeaders = {
+                "Authorization": f"Bearer {ACCESS_TOKEN}",
+                "Content-Type": "application/json",
+            }
 
         # Post the call to the Webex Teams message API.
         r = requests.post(
-            "<!!!REPLACEME with URL of Webex Teams Messages API!!!>",
-            data=<!!!REPLACEME!!!>,
-            headers=<!!!REPLACEME!!!>,
+            "https://webexapis.com/v1/messages",
+            data=postData,
+            headers=HTTPHeaders,
+            verify=False,
         )
         if not r.status_code == 200:
             raise Exception(

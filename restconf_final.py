@@ -1,9 +1,12 @@
 import json
 import requests
+import os
+from dotenv import load_dotenv
 requests.packages.urllib3.disable_warnings()
-ip = "10.0.15.61"
+load_dotenv()
+ip = os.getenv("ip")
 # Router IP Address is 10.0.15.61-65
-api_url = "https://10.0.15.61/restconf/data/ietf-interfaces:interfaces/interface=Loopback66070069"
+api_url = "https://{ip}/restconf/data/ietf-interfaces:interfaces/interface=Loopback66070069"
 
 # the RESTCONF HTTP headers, including the Accept and Content-Type
 # Two YANG data formats (JSON and XML) work with RESTCONF 
@@ -135,7 +138,7 @@ def disable():
 def status():
     api_url_status = "https://10.0.15.61/restconf/data/ietf-interfaces:interfaces-state/interface=Loopback66070069="
 
-    resp = requests.get(api_url, auth=basicauth, headers=headers, verify=False)
+    resp = requests.get(api_url_status, auth=basicauth, headers=headers, verify=False)
 
     if(resp.status_code >= 200 and resp.status_code <= 299):
         print("STATUS OK: {}".format(resp.status_code))
