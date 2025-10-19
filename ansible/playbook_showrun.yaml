@@ -2,6 +2,8 @@
 - name: Collect and save running-config
   hosts: csr
   gather_facts: no
+  collections:
+    - cisco.ios
   vars:
     student_id: "{{ student_id | default('66070069') }}"
   tasks:

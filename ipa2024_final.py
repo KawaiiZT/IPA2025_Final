@@ -76,18 +76,25 @@ while True:
 
         if command == "create":
             result = create()
+            responseMessage = result
         elif command == "delete":
             result = delete()
+            responseMessage = result
         elif command == "enable":
             result = enable()
+            responseMessage = result
         elif command == "disable":
             result = disable()
+            responseMessage = result
         elif command == "status":
             result = status()
+            responseMessage = result
         elif command == "gigabit_status":
             result = gigabit_status()
+            responseMessage = result
         elif command == "showrun":
             result = showrun()
+            responseMessage = result
         else:
             responseMessage = "Error: No command or unknown command"
             continue

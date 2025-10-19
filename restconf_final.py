@@ -6,7 +6,7 @@ requests.packages.urllib3.disable_warnings()
 load_dotenv()
 ip = os.getenv("ip")
 # Router IP Address is 10.0.15.61-65
-api_url = "https://{ip}/restconf/data/ietf-interfaces:interfaces/interface=Loopback66070069"
+api_url = f"https://{ip}/restconf/data/ietf-interfaces:interfaces/interface=Loopback66070069"
 
 # the RESTCONF HTTP headers, including the Accept and Content-Type
 # Two YANG data formats (JSON and XML) work with RESTCONF 
@@ -16,11 +16,17 @@ headers = {
 }
 basicauth = ("admin", "cisco")
 
-
 def create():
+    check = requests.get(api_url, auth=basicauth, headers=headers, verify=False)
+    if 200 <= check.status_code <= 299:
+        return "Error: Interface Loopback 66070069 already exists"
+    elif check.status_code not in (404,):
+        print(f"Pre-check error. Status Code: {check.status_code}")
+        print("Detail:", check.text)
+
     yangConfig = {
         "ietf-interfaces:interface": {
-            "name": "Loopback0",
+            "name": "Loopback66070069",
             "description": "Router ID",
             "type": "iana-if-type:softwareLoopback",
             "enabled": False,
@@ -52,6 +58,14 @@ def create():
 
 
 def delete():
+    check = requests.get(api_url, auth=basicauth, headers=headers, verify=False)
+    if check.status_code == 404:
+        return "Error: No Interface Loopback 66070069"
+    elif not (200 <= check.status_code <= 299):
+        print(f"Pre-check error. Status Code: {check.status_code}")
+        print("Detail:", check.text)
+        return "Error: Interface Loopback 66070069 cannot be delete"
+    
     resp = requests.delete(
         api_url,
         auth=basicauth,
@@ -68,12 +82,20 @@ def delete():
 
 
 def enable():
+    check = requests.get(api_url, auth=basicauth, headers=headers, verify=False)
+    if check.status_code == 404:
+        return "Error: No Interface Loopback 66070069"
+    elif not (200 <= check.status_code <= 299):
+        print(f"Pre-check error. Status Code: {check.status_code}")
+        print("Detail:", check.text)
+        return "Error: Interface Loopback 66070069 cannot be enable"
+    
     yangConfig = {
         "ietf-interfaces:interface": {
-            "name": "Loopback0",
+            "name": "Loopback66070069",
             "description": "Router ID",
             "type": "iana-if-type:softwareLoopback",
-            "enabled": False,
+            "enabled": True,
             "ietf-ip:ipv4": {
                 "address": [
                     {
@@ -102,12 +124,20 @@ def enable():
 
 
 def disable():
+    check = requests.get(api_url, auth=basicauth, headers=headers, verify=False)
+    if check.status_code == 404:
+        return "Error: No Interface Loopback 66070069"
+    elif not (200 <= check.status_code <= 299):
+        print(f"Pre-check error. Status Code: {check.status_code}")
+        print("Detail:", check.text)
+        return "Error: Interface Loopback 66070069 cannot be disable"
+    
     yangConfig = {
         "ietf-interfaces:interface": {
-            "name": "Loopback0",
+            "name": "Loopback66070069",
             "description": "Router ID",
             "type": "iana-if-type:softwareLoopback",
-            "enabled": True,
+            "enabled": False,
             "ietf-ip:ipv4": {
                 "address": [
                     {
@@ -136,7 +166,7 @@ def disable():
 
 
 def status():
-    api_url_status = "https://10.0.15.61/restconf/data/ietf-interfaces:interfaces-state/interface=Loopback66070069="
+    api_url_status = f"https://{ip}/restconf/data/ietf-interfaces:interfaces-state/interface=Loopback66070069="
 
     resp = requests.get(api_url_status, auth=basicauth, headers=headers, verify=False)
 
@@ -144,7 +174,7 @@ def status():
         print("STATUS OK: {}".format(resp.status_code))
         response_json = resp.json()
         admin_status = response_json["ietf-interfaces:interface"]["admin-status"]
-        oper_status = response_json["ietf-interfaces:interface"]["oper_status"]
+        oper_status = response_json["ietf-interfaces:interface"]["oper-status"]
         if admin_status == 'up' and oper_status == 'up':
             return "Interface Loopback 66070069 is enabled"
         elif admin_status == 'down' and oper_status == 'down':
