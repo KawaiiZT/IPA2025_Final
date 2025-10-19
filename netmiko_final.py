@@ -2,7 +2,7 @@ from netmiko import ConnectHandler
 from pprint import pprint
 from dotenv import load_dotenv
 import os
-load_dotenv
+load_dotenv()
 device_ip = os.getenv("ip")
 username = "admin"
 password = "cisco"

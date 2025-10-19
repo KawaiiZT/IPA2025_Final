@@ -112,41 +112,46 @@ while True:
         # Need to attach file if responseMessage is 'ok'; 
         # Read Send a Message with Attachments Local File Attachments
         # https://developer.webex.com/docs/basics for more detail
+        STUDENT_ID = os.getenv("STUDENT_ID", "66070069")
+        ROUTER_NAME = os.getenv("ROUTER_NAME", "CSR1KV")  # ใช้ค่า router จาก .env
 
-        if command == "showrun" and responseMessage == 'ok':
-            filename = f"show_run_66070069_CSR1000V.txt"
+        if command == "showrun" and responseMessage == "ok":
+            # ตั้งชื่อไฟล์ที่ playbook เซฟไว้ เช่น show_run_<studentID>_<router>.txt
+            # สมมุติ router_name เอาเป็น CSR1KV-PodX-Y (คุณกำหนดใน playbook ให้ตรง)
+            router_name = ROUTER_NAME   # แทน hardcode ด้วยค่าจาก .env
+            filename = f"show_run_{STUDENT_ID}_{router_name}.txt"
             fileobject = open(filename, "rb")
             filetype = "text/plain"
-            postData = MultipartEncoder(
-                fields={
-                    "roomId": roomIdToGetMessages,
-                    "text": "show running config",
-                    "files": (os.path.basename(filename), fileobject, filetype),
-                }
-            )
+
+            postData = {
+                "roomId": roomIdToGetMessages,
+                "text": "show running config",
+                "files": (filename, fileobject, filetype),
+            }
+            postData = MultipartEncoder(postData)
             HTTPHeaders = {
                 "Authorization": f"Bearer {ACCESS_TOKEN}",
                 "Content-Type": postData.content_type,
             }
-        # other commands only send text, or no attached file.
+            r = requests.post(
+                "https://webexapis.com/v1/messages",
+                data=postData,
+                headers=HTTPHeaders,
+            )
+            fileobject.close()
+            if r.status_code != 200:
+                raise Exception(f"Incorrect reply from Webex Teams API. Status code: {r.status_code}")
+
         else:
             postData = {"roomId": roomIdToGetMessages, "text": responseMessage}
-            postData = json.dumps(postData)
-
-            # the Webex Teams HTTP headers, including the Authorization and Content-Type
             HTTPHeaders = {
                 "Authorization": f"Bearer {ACCESS_TOKEN}",
-                "Content-Type": "application/json",
+                "Content-Type": "application/json"
             }
-
-        # Post the call to the Webex Teams message API.
-        r = requests.post(
-            "https://webexapis.com/v1/messages",
-            data=postData,
-            headers=HTTPHeaders,
-            verify=False,
-        )
-        if not r.status_code == 200:
-            raise Exception(
-                "Incorrect reply from Webex Teams API. Status code: {}".format(r.status_code)
+            r = requests.post(
+                "https://webexapis.com/v1/messages",
+                data=json.dumps(postData),
+                headers=HTTPHeaders,
             )
+            if r.status_code != 200:
+                raise Exception(f"Incorrect reply from Webex Teams API. Status code: {r.status_code}")

@@ -1,1 +1,2 @@
-CSR1000V ansible_host=192.168.1.193 ansible_user=admin ansible_password=cisco ansible_connection=ansible.netcommon.network_cli ansible_network_os=cisco.ios.ios ansible_network_cli_ssh_type=paramiko
+[routers]
+CSR1000V ansible_host=10.0.15.61 ansible_user=admin ansible_password=cisco ansible_connection=ansible.netcommon.network_cli ansible_network_os=cisco.ios.ios ansible_network_cli_ssh_type=paramiko

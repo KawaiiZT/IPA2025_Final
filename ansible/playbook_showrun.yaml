@@ -1,30 +1,28 @@
 ---
 - name: Collect and save running-config
-  hosts: CSR1000V
+  hosts: routers
   gather_facts: false
   connection: ansible.netcommon.network_cli
   collections:
     - cisco.ios
     - ansible.netcommon
   vars:
+    ansible_host: 10.0.15.61
     ansible_network_os: cisco.ios.ios
-    ansible_network_cli_ssh_type: paramiko   # <-- บรรทัดสำคัญ
+    ansible_network_cli_ssh_type: paramiko
     student_id: "{{ student_id | default('66070069') }}"
+    router_name: "{{ router_name | default('CSR1KV') }}"
+
   tasks:
     - name: Get running-config
       cisco.ios.ios_command:
         commands:
           - show running-config
       register: run_cfg
-    - name: Ensure local backups folder exists
-      delegate_to: localhost
-      ansible.builtin.file:
-        path: backups
-        state: directory
-        mode: '0755'
-    - name: Save running-config locally
+
+    - name: Save running-config at project root
       delegate_to: localhost
       ansible.builtin.copy:
         content: "{{ run_cfg.stdout[0] }}"
-        dest: "backups/show_run_{{ student_id }}_CSR1000V.txt"
+        dest: "{{ (playbook_dir + '/../show_run_' + student_id + '_' + router_name + '.txt') | realpath }}"
         mode: "0644"
