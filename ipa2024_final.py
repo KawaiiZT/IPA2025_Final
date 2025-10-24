@@ -10,7 +10,7 @@ import time, os, requests, json
 import restconf_final
 import netconf_final
 from netmiko_final import gigabit_status
-from ansible_final import showrun
+from ansible_final import showrun, motd
 from requests_toolbelt.multipart.encoder import MultipartEncoder 
 #######################################################################################
 # 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
@@ -145,6 +145,11 @@ while True:
                     responseMessage = netconf_final.status(ip)
                 else:
                     responseMessage = "Error: No command found."
+        elif len(parts) >= 4 and parts[2].lower() == "motd":
+            ip = parts[1]
+            motd_text = " ".join(parts[3:]).strip()
+            responseMessage = motd(ip, motd_text)
+            command = "motd"
 # 6. Complete the code to post the message to the Webex Teams room.
 
         # The Webex Teams POST JSON data for command showrun
@@ -187,7 +192,6 @@ while True:
             fileobject.close()
             if r.status_code != 200:
                 raise Exception(f"Incorrect reply from Webex Teams API. Status code: {r.status_code}")
-
         else:
             postData = {"roomId": roomIdToGetMessages, "text": responseMessage}
             HTTPHeaders = {
