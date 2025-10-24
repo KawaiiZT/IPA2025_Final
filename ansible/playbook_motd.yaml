@@ -1,0 +1,20 @@
+---
+- name: Set MOTD
+  hosts: routers
+  gather_facts: false
+  connection: network_cli
+  collections:
+    - cisco.ios
+  vars:
+    banner_delim: "@"
+  tasks:
+  - name: Remove existing MOTD
+    cisco.ios.ios_command:
+      commands:
+        - no banner motd
+
+  - name: config motd
+    ios_banner:
+      banner: motd
+      text: "{{ motd }}"
+      state: present
