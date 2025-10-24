@@ -1,88 +1,163 @@
 from ncclient import manager
 import xmltodict
 
-m = manager.connect(
-    host="<!!!REPLACEME with router IP address!!!>",
-    port=<!!!REPLACEME with NETCONF Port number!!!>,
-    username="admin",
-    password="cisco",
-    hostkey_verify=False
+USERNAME = "admin"
+PASSWORD = "cisco"
+PORT     = 830
+
+IF_NAME  = "Loopback66070069"
+IF_DESC  = "Router ID"
+IF_IP    = "172.0.69.1"
+IF_MASK  = "255.255.255.0"
+def _connect(ip: str):
+
+    return manager.connect(
+        host=ip,
+        port=PORT,
+        username=USERNAME,
+        password=PASSWORD,
+        hostkey_verify=False,
+        allow_agent=False,
+        look_for_keys=False,
+        timeout=30
     )
+def _get_iface_cfg(ip: str):
+    flt = f"""
+<filter>
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+      <name>{IF_NAME}</name>
+      <enabled/>
+    </interface>
+  </interfaces>
+</filter>""".strip()
+    with _connect(ip) as m:
+        reply = m.get_config(source="running", filter=flt)
+    return reply
 
-def create():
-    netconf_config = """<!!!REPLACEME with YANG data!!!>"""
+def _iface_exists(ip: str) -> bool:
+    reply = _get_iface_cfg(ip)
+    return IF_NAME in reply.xml
 
+def _is_enabled(ip: str) -> bool | None:
+    reply = _get_iface_cfg(ip)
+    d = xmltodict.parse(reply.xml)
     try:
-        netconf_reply = netconf_edit_config(netconf_config)
-        xml_data = netconf_reply.xml
-        print(xml_data)
-        if '<ok/>' in xml_data:
-            return "<!!!REPLACEME with proper message!!!>"
-    except:
-        print("Error!")
+        data = d["rpc-reply"]["data"]["interfaces"]["interface"]
+        # บางระบบ interface อาจเป็น list
+        if isinstance(data, list):
+            data = data[0]
+        enabled = data.get("enabled")
+        if enabled is None:
+            # บน IOS XE ถ้าไม่ระบุ enabled มักแปลว่าค่า default = true
+            return True
+        return True if str(enabled).lower() == "true" else False
+    except Exception:
+        return None
+    
+def create(ip: str, sid: str) -> str:
+    if _iface_exists(ip):
+        return f"Cannot create: Interface loopback {IF_NAME.replace('Loopback','')}"
+
+    config = f"""
+<config>
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+      <name>{IF_NAME}</name>
+      <description>{IF_DESC}</description>
+      <type xmlns:ianaift="urn:ietf:params:xml:ns:yang:iana-if-type">ianaift:softwareLoopback</type>
+      <enabled>false</enabled>
+      <ipv4 xmlns="urn:ietf:params:xml:ns:yang:ietf-ip">
+        <address>
+          <ip>{IF_IP}</ip>
+          <netmask>{IF_MASK}</netmask>
+        </address>
+      </ipv4>
+    </interface>
+  </interfaces>
+</config>""".strip()
+
+    with _connect(ip) as m:
+        r = m.edit_config(target="running", config=config)
+    return (f"Interface loopback {IF_NAME.replace('Loopback','')} "
+            f"is created successfully using Netconf") if "<ok/>" in r.xml \
+           else "Cannot create: Interface loopback 66070069"
 
 
-def delete():
-    netconf_config = """<!!!REPLACEME with YANG data!!!>"""
 
-    try:
-        netconf_reply = netconf_edit_config(netconf_config)
-        xml_data = netconf_reply.xml
-        print(xml_data)
-        if '<ok/>' in xml_data:
-            return "<!!!REPLACEME with proper message!!!>"
-    except:
-        print("Error!")
+def delete(ip: str) -> str:
+    if not _iface_exists(ip):
+        return "Cannot delete: Interface loopback 66070069"
 
+    config = f"""
+<config>
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface operation="delete">
+      <name>{IF_NAME}</name>
+    </interface>
+  </interfaces>
+</config>""".strip()
 
-def enable():
-    netconf_config = """<!!!REPLACEME with YANG data!!!>"""
-
-    try:
-        netconf_reply = netconf_edit_config(netconf_config)
-        xml_data = netconf_reply.xml
-        print(xml_data)
-        if '<ok/>' in xml_data:
-            return "<!!!REPLACEME with proper message!!!>"
-    except:
-        print("Error!")
+    with _connect(ip) as m:
+        r = m.edit_config(target="running", config=config)
+    return "Interface loopback 66070069 is deleted successfully using Netconf" \
+        if "<ok/>" in r.xml else "Cannot delete: Interface loopback 66070069"
 
 
-def disable():
-    netconf_config = """<!!!REPLACEME with YANG data!!!>"""
+def enable(ip: str) -> str:
+    if not _iface_exists(ip):
+        return "No Interface loopback 66070069 (checked by Netconf)"
 
-    try:
-        netconf_reply = netconf_edit_config(netconf_config)
-        xml_data = netconf_reply.xml
-        print(xml_data)
-        if '<ok/>' in xml_data:
-            return "<!!!REPLACEME with proper message!!!>"
-    except:
-        print("Error!")
+    cur = _is_enabled(ip)
+    if cur is True:
+        return "Cannot enable: Interface loopback 66070069"
 
-def netconf_edit_config(netconf_config):
-    return  m.<!!!REPLACEME with the proper Netconf operation!!!>(target="<!!!REPLACEME with NETCONF Datastore!!!>", config=<!!!REPLACEME with netconf_config!!!>)
+    config = f"""
+<config>
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+      <name>{IF_NAME}</name>
+      <enabled>true</enabled>
+    </interface>
+  </interfaces>
+</config>""".strip()
 
+    with _connect(ip) as m:
+        r = m.edit_config(target="running", config=config)
+    return "Interface loopback 66070069 is enabled successfully using Netconf" \
+        if "<ok/>" in r.xml else "Cannot enable: Interface loopback 66070069"
 
-def status():
-    netconf_filter = """<!!!REPLACEME with YANG data!!!>"""
+def disable(ip: str) -> str:
+    if not _iface_exists(ip):
+        return "No Interface loopback 66070069 (checked by Netconf)"
 
-    try:
-        # Use Netconf operational operation to get interfaces-state information
-        netconf_reply = m.<!!!REPLACEME with the proper Netconf operation!!!>(filter=<!!!REPLACEME with netconf_filter!!!>)
-        print(netconf_reply)
-        netconf_reply_dict = xmltodict.<!!!REPLACEME with the proper method!!!>(netconf_reply.xml)
+    cur = _is_enabled(ip)
+    if cur is False:
+        return "Interface loopback 66070069 is already disabled (checked by Netconf)"
 
-        # if there data return from netconf_reply_dict is not null, the operation-state of interface loopback is returned
-        if <!!!REPLACEME with the proper condition!!!>:
-            # extract admin_status and oper_status from netconf_reply_dict
-            admin_status = <!!!REPLACEME!!!>
-            oper_status = <!!!REPLACEME !!!>
-            if admin_status == 'up' and oper_status == 'up':
-                return "<!!!REPLACEME with proper message!!!>"
-            elif admin_status == 'down' and oper_status == 'down':
-                return "<!!!REPLACEME with proper message!!!>"
-        else: # no operation-state data
-            return "<!!!REPLACEME with proper message!!!>"
-    except:
-       print("Error!")
+    config = f"""
+<config>
+  <interfaces xmlns="urn:ietf:params:xml:ns:yang:ietf-interfaces">
+    <interface>
+      <name>{IF_NAME}</name>
+      <enabled>false</enabled>
+    </interface>
+  </interfaces>
+</config>""".strip()
+
+    with _connect(ip) as m:
+        r = m.edit_config(target="running", config=config)
+    return "Interface loopback 66070069 is now disabled using Netconf" \
+        if "<ok/>" in r.xml else "Cannot disable: Interface loopback 66070069"
+
+def status(ip: str) -> str:
+    if not _iface_exists(ip):
+        return "No Interface loopback 66070069 (checked by Netconf)"
+
+    cur = _is_enabled(ip)
+    if cur is True:
+        return "Interface loopback 66070069 is enabled (checked by Netconf)"
+    elif cur is False:
+        return "Interface loopback 66070069 is disabled (checked by Netconf)"
+    else:
+        return "Status unknown (checked by Netconf)"
