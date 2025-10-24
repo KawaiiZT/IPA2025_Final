@@ -8,6 +8,7 @@
 from dotenv import load_dotenv
 import time, os, requests, json
 import restconf_final
+import netconf_final
 from netmiko_final import gigabit_status
 from ansible_final import showrun
 from requests_toolbelt.multipart.encoder import MultipartEncoder 
@@ -131,7 +132,19 @@ while True:
                         responseMessage = "Error: No command found."
                 except Exception as e:
                     responseMessage = f"Error: {e}"
-        
+            elif METHOD == "netconf":
+                if action == "create":
+                    responseMessage = netconf_final.create(ip, sid)
+                elif action == "delete":
+                    responseMessage = netconf_final.delete(ip)
+                elif action == "enable":
+                    responseMessage = netconf_final.enable(ip)
+                elif action == "disable":
+                    responseMessage = netconf_final.disable(ip)
+                elif action == "status":
+                    responseMessage = netconf_final.status(ip)
+                else:
+                    responseMessage = "Error: No command found."
 # 6. Complete the code to post the message to the Webex Teams room.
 
         # The Webex Teams POST JSON data for command showrun
