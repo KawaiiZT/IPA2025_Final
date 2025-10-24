@@ -1,20 +1,85 @@
+# ansible/playbook_motd.yaml
 ---
-- name: Set MOTD
-  hosts: routers
-  gather_facts: false
-  connection: network_cli
-  collections:
-    - cisco.ios
-  vars:
-    banner_delim: "@"
-  tasks:
-  - name: Remove existing MOTD
-    cisco.ios.ios_command:
-      commands:
-        - no banner motd
+- name: Set MOTD via ssh (ASKPASS, no extra deps)
+  hosts: localhost
+  gather_facts: no
+  connection: local
 
-  - name: config motd
-    ios_banner:
-      banner: motd
-      text: "{{ motd }}"
-      state: present
+  vars:
+    ip: "{{ ip }}"
+    ssh_user: "{{ ansible_user }}"
+    ssh_key: "{{ ssh_private_key_path | default('') | expanduser }}"
+    login_password: "{{ ansible_password | default('') }}"
+    enable_password: "{{ enable_password | default('') }}"
+    motd: "{{ motd }}"
+    banner_delim: "@"
+    askpass_path: "/tmp/askpass_{{ ip | regex_replace('[^0-9A-Za-z_.-]','_') }}.sh"
+
+  tasks:
+    - name: Create SSH_ASKPASS script (for password login)
+      ansible.builtin.copy:
+        dest: "{{ askpass_path }}"
+        mode: "0700"
+        content: |
+          #!/bin/sh
+          echo "{{ login_password }}"
+      when: login_password | length > 0
+
+    - name: Ensure private key has strict permission (if provided)
+      ansible.builtin.file:
+        path: "{{ ssh_key }}"
+        mode: "0600"
+      when: ssh_key | length > 0 and ssh_key != "None"
+      failed_when: false
+
+    - name: Configure MOTD using ssh + ASKPASS (-T, no TTY)
+      ansible.builtin.shell: |
+        set -e
+        SSH_OPTS="-oKexAlgorithms=+diffie-hellman-group14-sha1,diffie-hellman-group-exchange-sha1 \
+                  -oHostKeyAlgorithms=+ssh-rsa \
+                  -oPubkeyAcceptedKeyTypes=+ssh-rsa \
+                  -oPubkeyAcceptedAlgorithms=+ssh-rsa \
+                  -oCiphers=+aes256-ctr,aes192-ctr,aes128-ctr,aes128-cbc,3des-cbc \
+                  -oMACs=+hmac-sha1,hmac-sha1-96 \
+                  -oUserKnownHostsFile=/dev/null \
+                  -oStrictHostKeyChecking=no \
+                  -oNumberOfPasswordPrompts=1"
+        # ใส่กุญแจถ้ามี
+        {% if ssh_key | length > 0 and ssh_key != "None" %}
+        SSH_OPTS="$SSH_OPTS -i '{{ ssh_key }}'"
+        {% endif %}
+
+        export DISPLAY=:0
+        {% if login_password | length > 0 %}
+        export SSH_ASKPASS="{{ askpass_path }}"
+        {% endif %}
+
+        # ใช้ -T (no TTY) เพื่อบังคับให้ ASKPASS ทำงานตอน auth
+        # ส่งคำสั่งทั้งหมดผ่าน heredoc
+        # ถ้าบัญชีเป็น privilege 15 อยู่แล้ว ให้ลบบรรทัด enable/{{ enable_password }} ออกได้
+        setsid -w ssh -T $SSH_OPTS {{ ssh_user }}@{{ ip }} <<'EOS'
+        terminal length 0
+        {% if enable_password %}
+        enable
+        {{ enable_password }}
+        {% endif %}
+        configure terminal
+        no banner motd
+        banner motd {{ banner_delim }}{{ motd }}{{ banner_delim }}
+        end
+        write memory
+        exit
+        EOS
+      args:
+        executable: /bin/bash
+      register: ssh_run
+      environment:
+        # เผื่อบางระบบต้องการ env นี้ให้ ssh เห็นตัวแปรได้
+        SSH_ASKPASS: "{{ askpass_path | default('') }}"
+        DISPLAY: ":0"
+
+    - name: Cleanup ASKPASS script
+      ansible.builtin.file:
+        path: "{{ askpass_path }}"
+        state: absent
+      when: login_password | length > 0
