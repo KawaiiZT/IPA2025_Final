@@ -1,16 +1,85 @@
-# ansible_final.py
-#อย่าไปแก้ไม่รู้ทำไมมันติดเหมือนกันอันอื่นไม่ติด
 import os
 import subprocess
 import tempfile
 from pathlib import Path
 
-# ลิสต์ข้อความ/แพทเทิร์นที่ไม่อยากให้โผล่ในผลลัพธ์
 _SUPPRESS_PATTERNS = (
     "[DEPRECATION WARNING]",
     "Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg",
     "[WARNING]: Deprecation warnings can be disabled",
 )
+def motd(ip: str, motd_text: str) -> str:
+    STUDENT_ID  = os.getenv("STUDENT_ID", "66070069")
+    ROUTER_NAME = os.getenv("ROUTER_NAME", "CSR1KV")
+    PLAYBOOK    = os.getenv("ANSIBLE_PLAYBOOK", "ansible/playbook_motd.yaml")
+
+    ansible_user = os.getenv("ANSIBLE_USER", "")
+    ansible_pass = os.getenv("ANSIBLE_PASSWORD", "")
+    enable_pass  = os.getenv("ANSIBLE_ENABLE_PASSWORD", "")
+    tmpdir = tempfile.TemporaryDirectory()
+    inv_path = Path(tmpdir.name) / "inventory.ini"
+    inv_lines = [
+        "[routers]",
+        (f"{ROUTER_NAME} ansible_host={ip} "
+         f"ansible_user={ansible_user} ansible_password={ansible_pass} "
+         f"ansible_network_os=ios").strip()
+    ]
+    if enable_pass:
+        inv_lines += [
+            "[routers:vars]",
+            "ansible_become=True",
+            "ansible_become_method=enable",
+            f"ansible_become_password={enable_pass}",
+        ]
+    inv_path.write_text("\n".join(inv_lines) + "\n", encoding="utf-8")
+
+    vars_path = Path(tmpdir.name) / "extra_vars.json"
+    vars_path.write_text(
+        '{'
+        f'"student_id": "{STUDENT_ID}", '
+        f'"router_name": "{ROUTER_NAME}", '
+        f'"motd": {repr(motd_text)}'
+        '}',
+        encoding="utf-8"
+    )
+
+    ssh_common_args = (
+        "-oKexAlgorithms=+diffie-hellman-group14-sha1 "
+        "-oHostKeyAlgorithms=+ssh-rsa "
+        "-oPubkeyAcceptedAlgorithms=+ssh-rsa "
+        "-oStrictHostKeyChecking=no"
+    )
+
+    env = os.environ.copy()
+    env["ANSIBLE_HOST_KEY_CHECKING"]     = "False"
+    env["ANSIBLE_DEPRECATION_WARNINGS"]  = "False"
+    env["ANSIBLE_DISPLAY_SKIPPED_HOSTS"] = "False"
+    env["PYTHONWARNINGS"]                = "ignore"
+
+    cmd = [
+        "ansible-playbook",
+        "-i", str(inv_path),
+        "--ssh-common-args", ssh_common_args,
+        "-e", "ansible_connection=network_cli",
+        "-e", f"@{vars_path}",
+        PLAYBOOK,
+    ]
+
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180)
+        raw_output = (proc.stdout or "") + "\n" + (proc.stderr or "")
+        output = _clean_output(raw_output)
+        print(output)
+
+        if proc.returncode == 0 and "failed=0" in raw_output.lower():
+            tmpdir.cleanup()
+            return f'ok: MOTD configured -> "{motd_text}"'
+        else:
+            tmpdir.cleanup()
+            return "Error: Ansible"
+    except Exception:
+        tmpdir.cleanup()
+        return "Error: Ansible"
 
 def _clean_output(text: str, keep_tail_chars: int = 1500) -> str:
     """กรองบรรทัด warning/deprecation และตัดให้สั้นลง"""
@@ -38,9 +107,7 @@ def showrun():
     if not ansible_user or not ansible_pass:
         return "Error: Ansible\nMissing ANSIBLE_USER/ANSIBLE_PASSWORD in environment (.env)"
 
-    target_ip = "10.0.15.61"  # บังคับยิงเครื่องนี้
-
-    # สร้าง inventory ชั่วคราว (มี group [routers] ให้ match playbook)
+    target_ip = "10.0.15.61"
     inv_lines = [
         "[routers]",
         (f"{ROUTER_NAME} ansible_host={target_ip} "
@@ -58,7 +125,6 @@ def showrun():
     inv_path = Path(tmpdir.name) / "inventory.ini"
     inv_path.write_text("\n".join(inv_lines) + "\n", encoding="utf-8")
 
-    # SSH options + ปิด host key checking
     ssh_common_args = (
         "-oKexAlgorithms=+diffie-hellman-group14-sha1 "
         "-oHostKeyAlgorithms=+ssh-rsa "
@@ -68,9 +134,9 @@ def showrun():
 
     env = os.environ.copy()
     env["ANSIBLE_HOST_KEY_CHECKING"]    = "False"
-    env["ANSIBLE_DEPRECATION_WARNINGS"] = "False"   # ปิด deprecation warnings
-    env["ANSIBLE_DISPLAY_SKIPPED_HOSTS"]= "False"   # ไม่ต้องโชว์ skipped
-    env["PYTHONWARNINGS"]               = "ignore"  # กัน python warn โผล่
+    env["ANSIBLE_DEPRECATION_WARNINGS"] = "False"
+    env["ANSIBLE_DISPLAY_SKIPPED_HOSTS"]= "False"
+    env["PYTHONWARNINGS"]               = "ignore"
 
     extra_vars = f"student_id={STUDENT_ID} router_name={ROUTER_NAME}"
 
@@ -82,14 +148,13 @@ def showrun():
         "-e", extra_vars,
         PLAYBOOK,
     ]
-    # เปิดดีบักเพิ่มได้ถ้าจำเป็น: cmd.append("-vvv")
 
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, env=env, timeout=180)
         raw_output = (proc.stdout or "") + "\n" + (proc.stderr or "")
         output = _clean_output(raw_output)  # กรอง warning ออก
 
-        print(output)  # ให้เห็น log ที่ผ่านการกรองแล้วในคอนโซล
+        print(output)
 
         if proc.returncode == 0 and "failed=0" in raw_output.lower():
             tmpdir.cleanup()
