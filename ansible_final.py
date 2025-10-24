@@ -8,16 +8,14 @@ _SUPPRESS_PATTERNS = (
     "Deprecation warnings can be disabled by setting `deprecation_warnings=False` in ansible.cfg",
     "[WARNING]: Deprecation warnings can be disabled",
 )
-def motd(ip: str, motd_text: str) -> str:
+def motd(ip: str, motd_text: str) -> str: 
     STUDENT_ID   = os.getenv("STUDENT_ID", "66070069")
     ROUTER_NAME  = os.getenv("ROUTER_NAME", "CSR1KV")
     PLAYBOOK     = os.getenv("ANSIBLE_MOTD_PLAYBOOK", "ansible/playbook_motd.yaml")
 
     ansible_user = os.getenv("ANSIBLE_USER", "")
-    ansible_pass = os.getenv("ANSIBLE_PASSWORD", "")       # <= สำคัญสำหรับ ASKPASS
-    enable_pass  = os.getenv("ANSIBLE_ENABLE_PASSWORD", "")  # ว่างได้ ถ้าไม่ต้อง enable
-    ssh_key_path = os.getenv("ANSIBLE_SSH_PRIVATE_KEY", "")  # ว่างได้
-    exp_key = os.path.expanduser(ssh_key_path) if ssh_key_path else ""
+    ansible_pass = os.getenv("ANSIBLE_PASSWORD", "")
+    enable_pass  = os.getenv("ANSIBLE_ENABLE_PASSWORD", "")
 
     tmpdir = tempfile.TemporaryDirectory()
     vars_path = Path(tmpdir.name) / "extra_vars.json"
@@ -27,7 +25,6 @@ def motd(ip: str, motd_text: str) -> str:
         f'"ansible_user": {repr(ansible_user)}, '
         f'"ansible_password": {repr(ansible_pass)}, '
         f'"enable_password": {repr(enable_pass)}, '
-        f'"ssh_private_key_path": {repr(exp_key)}, '
         f'"motd": {repr(motd_text)}'
         '}',
         encoding="utf-8"
@@ -56,6 +53,7 @@ def motd(ip: str, motd_text: str) -> str:
     except Exception:
         tmpdir.cleanup()
         return "Error: Ansible"
+
 
 
 
