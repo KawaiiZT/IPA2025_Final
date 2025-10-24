@@ -4,11 +4,11 @@ import xmltodict
 USERNAME = "admin"
 PASSWORD = "cisco"
 PORT     = 830
-
 IF_NAME  = "Loopback66070069"
 IF_DESC  = "Router ID"
 IF_IP    = "172.0.69.1"
 IF_MASK  = "255.255.255.0"
+
 def _connect(ip: str):
 
     return manager.connect(
@@ -21,6 +21,7 @@ def _connect(ip: str):
         look_for_keys=False,
         timeout=30
     )
+
 def _get_iface_cfg(ip: str):
     flt = f"""
 <filter>
@@ -44,12 +45,10 @@ def _is_enabled(ip: str) -> bool | None:
     d = xmltodict.parse(reply.xml)
     try:
         data = d["rpc-reply"]["data"]["interfaces"]["interface"]
-        # บางระบบ interface อาจเป็น list
         if isinstance(data, list):
             data = data[0]
         enabled = data.get("enabled")
         if enabled is None:
-            # บน IOS XE ถ้าไม่ระบุ enabled มักแปลว่าค่า default = true
             return True
         return True if str(enabled).lower() == "true" else False
     except Exception:
@@ -133,7 +132,7 @@ def disable(ip: str) -> str:
 
     cur = _is_enabled(ip)
     if cur is False:
-        return "Interface loopback 66070069 is already disabled (checked by Netconf)"
+        return "Cannot shutdown: Interface loopback 66070069 (checked by Netconf)"
 
     config = f"""
 <config>
