@@ -85,7 +85,7 @@ while True:
                 METHOD = "restconf"
                 responseMessage = "Ok: Restconf"
             elif command == "netconf":
-                METHOD = "Netconf"
+                METHOD = "netconf"
                 responseMessage = "Ok: Netconf"
             elif command == "create":
                 if METHOD is None:
@@ -109,20 +109,28 @@ while True:
             action = parts[2].lower()
             command = action
 
-            if action == "create":
-                if METHOD is None:
-                    responseMessage = "Error: No method specified"
-                elif METHOD.lower() == "restconf":
-                    try:
+            if METHOD is None:
+                responseMessage = "Error: No method specified"
+
+            elif METHOD == "restconf":
+                try:
+                    if action == "create":
                         responseMessage = restconf_final.create(ip, sid)
-                    except Exception as e:
-                        responseMessage = f"Error: {e}"
-                elif METHOD.lower() == "netconf":
-                    responseMessage = f"Interface loopback {sid} is created successfully using Netconf"
-                else:
-                    responseMessage = "Error: No method specified"
-            else:
-                responseMessage = "Error: No command found."
+                    elif action == "delete":
+                        restconf_final.set_url(ip)
+                        responseMessage = restconf_final.delete()
+                    elif action == "enable":
+                        restconf_final.set_url(ip)
+                        responseMessage = restconf_final.enable()
+                    elif action == "disable":
+                        restconf_final.set_url(ip)
+                        responseMessage = restconf_final.disable()
+                    elif action == "status":
+                        responseMessage = restconf_final.status(ip)
+                    else:
+                        responseMessage = "Error: No command found."
+                except Exception as e:
+                    responseMessage = f"Error: {e}"
         
 # 6. Complete the code to post the message to the Webex Teams room.
 
