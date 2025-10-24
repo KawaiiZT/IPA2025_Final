@@ -7,7 +7,7 @@
 # 1. Import libraries for API requests, JSON formatting, time, os, (restconf_final or netconf_final), netmiko_final, and ansible_final.
 from dotenv import load_dotenv
 import time, os, requests, json
-from restconf_final import create, status, delete, enable, disable
+import restconf_final
 from netmiko_final import gigabit_status
 from ansible_final import showrun
 from requests_toolbelt.multipart.encoder import MultipartEncoder 
@@ -15,7 +15,7 @@ from requests_toolbelt.multipart.encoder import MultipartEncoder
 # 2. Assign the Webex access token to the variable ACCESS_TOKEN using environment variables.
 load_dotenv()
 ACCESS_TOKEN = os.getenv("ACCESS_TOKEN")
-
+METHOD = None
 #######################################################################################
 # 3. Prepare parameters get the latest message for messages API.
 
@@ -74,30 +74,55 @@ while True:
 
 # 5. Complete the logic for each command
 
-        if command == "create":
-            result = create()
-            responseMessage = result
-        elif command == "delete":
-            result = delete()
-            responseMessage = result
-        elif command == "enable":
-            result = enable()
-            responseMessage = result
-        elif command == "disable":
-            result = disable()
-            responseMessage = result
-        elif command == "status":
-            result = status()
-            responseMessage = result
-        elif command == "gigabit_status":
-            result = gigabit_status()
-            responseMessage = result
-        elif command == "showrun":
-            result = showrun()
-            responseMessage = result
-        else:
-            responseMessage = "Error: No command or unknown command"
-            continue
+        parts = message.strip().split()
+        sid = parts[0][1:] if parts and parts[0].startswith("/") else ""
+
+        command = parts[1].lower() if len(parts) > 1 else ""
+        responseMessage = None
+
+        if len(parts) == 2:
+            if command == "restconf":
+                METHOD = "restconf"
+                responseMessage = "Ok: Restconf"
+            elif command == "netconf":
+                METHOD = "Netconf"
+                responseMessage = "Ok: Netconf"
+            elif command == "create":
+                if METHOD is None:
+                    responseMessage = "Error: No method specified"
+                else:
+                    responseMessage = "Error: No IP specified"
+            elif command == "delete":
+                responseMessage = "Error: No IP specified"
+            else:
+                if command == "gigabit_status":
+                    result = gigabit_status()
+                    responseMessage = result
+                elif command == "showrun":
+                    result = showrun()
+                    responseMessage = result
+                else:
+                    responseMessage = "Error: No command found."
+
+        elif len(parts) == 3:
+            ip = parts[1]
+            action = parts[2].lower()
+            command = action
+
+            if action == "create":
+                if METHOD is None:
+                    responseMessage = "Error: No method specified"
+                elif METHOD.lower() == "restconf":
+                    try:
+                        responseMessage = restconf_final.create(ip, sid)
+                    except Exception as e:
+                        responseMessage = f"Error: {e}"
+                elif METHOD.lower() == "netconf":
+                    responseMessage = f"Interface loopback {sid} is created successfully using Netconf"
+                else:
+                    responseMessage = "Error: No method specified"
+            else:
+                responseMessage = "Error: No command found."
         
 # 6. Complete the code to post the message to the Webex Teams room.
 

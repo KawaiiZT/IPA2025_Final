@@ -1,8 +1,8 @@
 Building configuration...
 
-Current configuration : 5942 bytes
+Current configuration : 5952 bytes
 !
-! Last configuration change at 03:54:57 UTC Mon Oct 20 2025 by NETCONF
+! Last configuration change at 05:21:30 UTC Mon Oct 20 2025 by NETCONF
 !
 version 16.9
 service timestamps debug datetime msec
@@ -164,6 +164,7 @@ interface Loopback66070052
 interface Loopback66070069
  description Router ID
  ip address 172.0.69.1 255.255.255.0
+ shutdown
 !
 interface Loopback66070084
  description Interface created by student 66070084 via RESTCONF

@@ -9,3 +9,5 @@ venv/
 # Local env files (อย่าพุช)
 .env
 .env.*.local
+
+exrestconf_final.py
