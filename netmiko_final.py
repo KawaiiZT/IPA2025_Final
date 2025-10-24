@@ -1,21 +1,32 @@
 from netmiko import ConnectHandler
 from pprint import pprint
-from dotenv import load_dotenv
-import os
-load_dotenv()
-device_ip = os.getenv("ip")
+import re
+
 username = "admin"
 password = "cisco"
 
-device_params = {
-    "device_type": "cisco_ios",
-    "ip": device_ip,
-    "username": username,
-    "password": password,
-}
+def read_motd(ip: str | None = None) -> str:
+    device_params = {
+        "device_type": "cisco_ios",
+        "ip": ip,
+        "username": username,
+        "password": password,
+    }
+    try:
+        with ConnectHandler(**device_params) as ssh:
+            out = ssh.send_command("show banner motd", use_textfsm=False).strip()
+            if out:
+                return out
+    except Exception:
+        return "Error: No MOTD Configured"
 
-
-def gigabit_status():
+def gigabit_status(ip: str) -> str:
+    device_params = {
+        "device_type": "cisco_ios",
+        "ip": ip,
+        "username": username,
+        "password": password,
+    }
     ans = ""
     with ConnectHandler(**device_params) as ssh:
         up = 0

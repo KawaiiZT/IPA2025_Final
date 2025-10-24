@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import time, os, requests, json
 import restconf_final
 import netconf_final
-from netmiko_final import gigabit_status
+from netmiko_final import gigabit_status, read_motd
 from ansible_final import showrun, motd
 from requests_toolbelt.multipart.encoder import MultipartEncoder 
 #######################################################################################
@@ -95,6 +95,8 @@ while True:
                     responseMessage = "Error: No IP specified"
             elif command == "delete":
                 responseMessage = "Error: No IP specified"
+            elif command == "motd":
+                responseMessage = "Error: No IP specified"
             else:
                 if command == "gigabit_status":
                     result = gigabit_status()
@@ -104,13 +106,15 @@ while True:
                     responseMessage = result
                 else:
                     responseMessage = "Error: No command found."
-
         elif len(parts) == 3:
             ip = parts[1]
             action = parts[2].lower()
             command = action
 
-            if METHOD is None:
+            if action == "motd":
+                responseMessage = read_motd(ip)
+                
+            elif METHOD is None:
                 responseMessage = "Error: No method specified"
 
             elif METHOD == "restconf":
