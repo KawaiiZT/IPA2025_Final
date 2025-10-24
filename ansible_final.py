@@ -17,13 +17,6 @@ def motd(ip: str, motd_text: str) -> str:
     ansible_pass = os.getenv("ANSIBLE_PASSWORD", "")       # <= สำคัญสำหรับ ASKPASS
     enable_pass  = os.getenv("ANSIBLE_ENABLE_PASSWORD", "")  # ว่างได้ ถ้าไม่ต้อง enable
     ssh_key_path = os.getenv("ANSIBLE_SSH_PRIVATE_KEY", "")  # ว่างได้
-
-    if not ansible_user:
-        return "Error: Ansible\nMissing ANSIBLE_USER in environment (.env)"
-    if not os.path.exists(PLAYBOOK):
-        return f"Error: Playbook not found: {PLAYBOOK}"
-
-    # expand ~ ใน path key (ถ้ากำหนด)
     exp_key = os.path.expanduser(ssh_key_path) if ssh_key_path else ""
 
     tmpdir = tempfile.TemporaryDirectory()
