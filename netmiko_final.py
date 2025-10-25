@@ -20,7 +20,7 @@ def read_motd(ip: str | None = None) -> str:
     except Exception:
         return "Error: No MOTD Configured"
 
-def gigabit_status(ip: str) -> str:
+def gigabit_status(ip="10.0.15.61"):
     device_params = {
         "device_type": "cisco_ios",
         "ip": ip,
